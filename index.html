@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AnchorRS: Rolling-Shutter-Aware Camera Trajectories</title>
+<meta name="description" content="AnchorRS recovers camera trajectories from long rolling-shutter videos with windows of a feed-forward 3D model, shared anchor frames and an estimated readout time.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="AnchorRS: Rolling-Shutter-Aware Camera Trajectories from Feed-Forward 3D Models">
+<meta property="og:description" content="Shared anchor frames keep window drift bounded, and a readout time estimated from the video handles the rolling shutter.">
+<meta property="og:url" content="https://arthur031221.github.io/anchorrs/">
+<meta property="og:image" content="https://arthur031221.github.io/anchorrs/media/share.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' rx='3' fill='%23364FC7'/%3E%3Cpath d='M8 11h16M8 16h16M8 21h16' stroke='%23fff' stroke-width='2.4'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/notosans-regular.woff" as="font" type="font/woff" crossorigin>
+<script>(function (d) {
+  d.classList.add('js');
+  /* the title plays once the text and fonts are ready and the main thread is idle, so a slow start does not use it up */
+  var on = false;
+  var go = function () { if (on) return; on = true; requestAnimationFrame(function () { requestAnimationFrame(function () { d.classList.add('tm-go'); document.dispatchEvent(new Event('tm-go')); }); }); };
+  var idle = function () { (window.requestIdleCallback || function (f) { setTimeout(f, 200); })(go, { timeout: 600 }); };
+  var ready = function () { (document.fonts ? document.fonts.ready : Promise.resolve()).then(idle, idle); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready); else ready();
+  setTimeout(go, 2000);
+})(document.documentElement);</script>
+<link rel="stylesheet" href="style.css?v=1121c">
+</head>
+<body>
+<a class="skip" href="#abstract">Skip to abstract</a>
+
+<nav class="toc" aria-label="Contents"><ol>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#method">Method</a></li>
+  <li><a href="#results">Results</a></li>
+  <li class="tsub"><a href="#trajectories">Trajectories</a></li>
+  <li class="tsub"><a href="#windows">Window count</a></li>
+  <li class="tsub"><a href="#tum-bonn">TUM and Bonn</a></li>
+  <li class="tsub"><a href="#rs-camera">Rolling shutter</a></li>
+  <li class="tsub"><a href="#replay">4D replay</a></li>
+  <li><a href="#bibtex">BibTeX</a></li>
+</ol></nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <h1><span class="name wordmark"><span class="wm-solid">Anchor<span class="rs">RS</span></span><span class="wm-rows" aria-hidden="true"><span style="--r:0"></span><span style="--r:1"></span><span style="--r:2"></span><span style="--r:3"></span><span style="--r:4"></span><span style="--r:5"></span></span></span><span class="sub">Rolling-Shutter-Aware Camera Trajectories from Feed-Forward 3D Models</span></h1>
+    <p class="authors"><span>Chi-Wei Lee</span>, <span>Yi-Chun Chang</span>, <span>Cheng-Han Chiang</span>, <span>An-Kai Chen</span>, <span>Po-Chih Kuo</span></p>
+    <p class="affil">National Tsing Hua University, Hsinchu, Taiwan</p>
+    <nav class="actions" aria-label="Paper links">
+      <a class="btn" href="paper.pdf">Paper (PDF)</a>
+      <button class="btn btn-off" type="button" disabled>arXiv (soon)</button>
+      <a class="btn btn-code" href="https://github.com/Arthur031221/anchorrs"><svg class="gh" viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg><span>Code</span></a>
+      <a class="btn" href="#bibtex">BibTeX</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="teaser">
+  <div class="wrap media">
+    <figure>
+      <video src="media/rolling_shutter.mp4" poster="media/rolling_shutter.webp" width="1280" height="720" muted loop playsinline controls preload="metadata" aria-label="Rolling-shutter sequence with the AnchorRS trajectory and the τ = 0 trajectory"></video>
+      <figcaption>AnchorRS shifts row <i>y</i> in time by <span class="nw">Δt(<i>y</i>) = τ(<i>y</i> − <i>c<sub>y</sub></i>)/<i>H</i></span> and picks the readout time τ that gives the most RANSAC inliers among the feature matches. The video is the only input, so the camera needs no shutter calibration.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="band" id="abstract" aria-labelledby="h-abs">
+  <div class="wrap text">
+    <h2 id="h-abs">Abstract</h2>
+    <p>Feed-forward 3D models predict accurate camera poses in one forward pass, but long videos must be split into windows. Most pipelines chain windows through their overlap, so alignment errors accumulate. The models also assume a global shutter, although rolling-shutter cameras are common, as in the TUM RGB-D and Bonn datasets. We present AnchorRS, a training-free offline method that estimates monocular camera trajectories by aligning windows of a feed-forward 3D model with similarity transforms (Sim(3) synchronization). We show that, if overlapping windows form a graph with independent noise on its edges, their mean drift variance is proportional to the graph's mean effective resistance, with noise variances as resistances. This variance grows linearly along a chain, like resistors in series. Sharing co-visible anchor frames across all windows keeps it bounded at no extra inference cost. A global bundle adjustment on a CPU then refines all poses with matches between all window pairs and a rolling-shutter model whose readout time is estimated directly from the video. With π<sup>3</sup> windows, AnchorRS has a mean absolute trajectory error of 0.93 cm and 1.38 cm on four dynamic TUM and eight Bonn sequences, more than a third below the best compared methods (1.50 cm and 2.11 cm). Without the rolling-shutter model, the error is 1.53 cm and 2.13 cm. On the rolling-shutter camera of the TUM rolling-shutter dataset, modelling the shutter reduces the error from 6.70 cm to 1.23 cm. AnchorRS lets existing feed-forward 3D models recover accurate camera trajectories from long rolling-shutter videos, without retraining or shutter calibration.</p>
+  </div>
+</section>
+
+<section id="method" aria-labelledby="h-met">
+  <div class="wrap media">
+    <h2 id="h-met">Method</h2>
+    <figure>
+      <img src="media/fig/method.webp" width="2071" height="867" alt="Overview of AnchorRS: windows that share anchor frames, Sim(3) synchronization, and bundle adjustment with a rolling-shutter model" loading="lazy">
+      <figcaption>In AnchorRS every window holds the same 16 anchor frames, spread uniformly over the video, plus its own block of 48 consecutive frames. Any two windows then meet through the anchors, at the same inference cost.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="results" aria-labelledby="h-res">
+  <div class="wrap media">
+    <h2 id="h-res">Results</h2>
+
+    <div class="block" id="trajectories">
+      <h3>Camera trajectories</h3>
+      <figure class="viewer" id="vLong" data-scenes="long_office_household" data-names="fr3/long office household" data-mode="stages">
+        <p class="v-meta"></p>
+        <div class="v-stage">
+          <canvas aria-label="Camera trajectories and fused points, drag to turn the view"></canvas>
+          <span class="v-load">loading points</span>
+        </div>
+        <div class="stages"></div>
+        <figcaption>Drag to turn the view.</figcaption>
+      </figure>
+
+      <figure class="viewer viewer-wide" id="vTest" data-scenes="tum_walking_static,tum_walking_xyz,tum_walking_rpy,tum_walking_halfsphere,bonn_balloon,bonn_balloon2,bonn_crowd,bonn_crowd2,bonn_person_tracking,bonn_person_tracking2,bonn_moving_nonobstructing_box,bonn_moving_nonobstructing_box2" data-names="TUM static|TUM xyz|TUM rpy|TUM halfsphere|Bonn Balloon|Bonn Balloon2|Bonn Crowd|Bonn Crowd2|Bonn Person|Bonn Person2|Bonn Moving|Bonn Moving2" data-start="1" data-mode="methods">
+        <div class="chips" role="radiogroup" aria-label="Sequence" data-groups="TUM, 4 sequences:4|Bonn, 8 sequences:8"></div>
+        <div class="v-body">
+          <div class="v-stage">
+            <canvas aria-label="Camera trajectories and fused points, drag to turn the view"></canvas>
+            <span class="v-load">loading points</span>
+          </div>
+          <ul class="legend"></ul>
+        </div>
+        <figcaption>Drag to turn the view. Errors are ATE RMSE in cm.</figcaption>
+      </figure>
+    </div>
+
+    <div class="block" id="windows">
+      <h3>Window count</h3>
+      <div class="scroll"><table class="narrow">
+        <thead><tr><th scope="col">Method</th><th scope="col">2 windows</th><th scope="col">12 windows</th><th scope="col">Growth</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Chained, overlap 16</th><td>1.07 cm</td><td>2.82 cm</td><td>2.6×</td></tr>
+          <tr><th scope="row">16 anchor frames</th><td>1.06 cm</td><td>1.86 cm</td><td>1.8×</td></tr>
+        </tbody>
+      </table></div>
+      <p class="cap">From 2 to 12 windows on five TUM sequences.</p>
+    </div>
+
+    <div class="block" id="tum-bonn">
+      <h3>TUM and Bonn</h3>
+      <div class="scroll"><table class="narrow">
+        <thead><tr><th scope="col">Method</th><th scope="col">TUM, ATE (cm)</th><th scope="col">Bonn, ATE (cm)</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">AnchorRS with τ = 0 (global-shutter model)</th><td>1.53</td><td>2.13</td></tr>
+          <tr><th scope="row">AnchorRS, π<sup>3</sup> windows</th><td><b>0.93</b></td><td><b>1.38</b></td></tr>
+          <tr><th scope="row">AnchorRS, DA3 windows</th><td>0.94</td><td>1.43</td></tr>
+          <tr><th scope="row">Best published</th><td>1.50 (SCOUT-SLAM)</td><td>2.11 (FLoTS-SLAM)</td></tr>
+          <tr><th scope="row">π<span class="pi"><sup>3</sup><sub>mos</sub></span>-SLAM</th><td>2.22</td><td>2.75</td></tr>
+          <tr><th scope="row">MASt3R-SLAM, calibrated</th><td>2.28</td><td>2.36</td></tr>
+          <tr><th scope="row">LASER (π<sup>3</sup>)</th><td>3.96</td><td>5.33</td></tr>
+          <tr><th scope="row">VGGT-SLAM 2.0</th><td>6.96</td><td>5.74</td></tr>
+          <tr><th scope="row">VGGT-Long (π<sup>3</sup>)</th><td>12.78</td><td>12.11</td></tr>
+        </tbody>
+      </table></div>
+      <p class="cap">With π<sup>3</sup> windows, AnchorRS has lower error than the best published result on 8 of the 12 sequences, equal on 3 and higher on Bonn Moving. Errors are ATE RMSE in cm.</p>
+    </div>
+
+    <div class="block" id="rs-camera">
+      <h3>Rolling-shutter camera</h3>
+      <div class="scroll"><table>
+        <thead><tr><th scope="col">Stage</th><th scope="col">ATE</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">After synchronization, before bundle adjustment</th><td>4.87 cm</td></tr>
+          <tr><th scope="row">Bundle adjustment with τ = 0</th><td>6.70 cm</td></tr>
+          <tr><th scope="row">Bundle adjustment with the rolling-shutter model</th><td><b>1.23 cm</b></td></tr>
+        </tbody>
+      </table></div>
+      <p class="cap">TUM rolling-shutter camera, ten sequences.</p>
+    </div>
+
+    <div class="block" id="replay">
+      <h3>4D replay</h3>
+      <figure class="v4" id="v4d" data-scenes="bonn_crowd,bonn_balloon,tum_walking_halfsphere" data-names="Bonn Crowd|Bonn Balloon|TUM halfsphere">
+        <div class="chips" role="radiogroup" aria-label="Sequence" hidden></div>
+        <div class="v-stage v4-stage" tabindex="0" hidden>
+          <img class="v4-pre" src="media/replay4d.webp" width="1280" height="720" alt="" decoding="async">
+          <canvas aria-label="4D replay, drag to turn the view"></canvas>
+          <div class="v4-labs" aria-hidden="true"><span class="v4-lab" style="--c:#364FC7">AnchorRS</span><span class="v4-lab" style="--c:#B5508C">π<span class="pi"><sup>3</sup><sub>mos</sub></span>-SLAM</span><span class="v4-lab" style="--c:#019E73">VGGT-Long</span></div>
+        </div>
+        <div class="v4-bar" hidden><button type="button" class="chip v4-play">Pause</button><input type="range" class="v4-range" min="0" max="99" step="1" value="99" aria-label="Frame"></div>
+        <p class="cap v4-hint" hidden>Drag to turn the view.</p>
+        <video src="media/replay4d.mp4" poster="media/replay4d.webp" width="1280" height="720" muted loop playsinline controls preload="none" aria-label="4D replay of Bonn and TUM sequences"></video>
+        <figcaption>Every fourth input frame adds its depth map to the static points, using the AnchorRS pose of that frame. The same depth is then placed with the poses of AnchorRS, π<span class="pi"><sup>3</sup><sub>mos</sub></span>-SLAM and VGGT-Long side by side.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="bibtex" aria-labelledby="h-bib">
+  <div class="wrap text">
+    <h2 id="h-bib">BibTeX</h2>
+<pre id="bib">@article{lee2026anchorrs,
+  title   = {AnchorRS: Rolling-Shutter-Aware Camera Trajectories
+             from Feed-Forward 3D Models},
+  author  = {Lee, Chi-Wei and Chang, Yi-Chun and Chiang, Cheng-Han
+             and Chen, An-Kai and Kuo, Po-Chih},
+  journal = {arXiv preprint},
+  year    = {2026}
+}</pre>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="wrap text">
+    <p>Page layout adapted from the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template">Academic Project Page Template</a>.</p>
+  </div>
+</footer>
+<script src="main.js" defer></script>
+</body>
+</html>
