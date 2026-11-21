@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anchorrs"
+version = "0.1.0"
+description = "Anchored synchronization and rolling-shutter bundle adjustment for long videos from feed-forward 3D reconstruction windows"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "opencv-python>=4.8",
+    "torch>=2.1",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["anchorrs*"]

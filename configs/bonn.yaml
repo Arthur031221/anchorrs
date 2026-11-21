@@ -1,0 +1,37 @@
+# Bonn RGB-D Dynamic, eight sequences, Table 1.
+dataset: bonn
+sequences:
+  - rgbd_bonn_balloon
+  - rgbd_bonn_balloon2
+  - rgbd_bonn_crowd
+  - rgbd_bonn_crowd2
+  - rgbd_bonn_person_tracking
+  - rgbd_bonn_person_tracking2
+  - rgbd_bonn_moving_nonobstructing_box
+  - rgbd_bonn_moving_nonobstructing_box2
+solver:
+  readout_grid_ms: [0.0, 33.34, 4.7619]   # candidate readout times tau (ms), Eq. (6)
+  seed: 0
+  num_features: 1500
+  keyframe_step: 3
+  within_lags: [1, 2, 4]
+  min_baseline: 0.08
+  max_baseline: 0.6
+  max_angle_deg: 25.0
+  num_wide_pairs: 6
+  num_low_parallax_pairs: 6
+  block_rot_sigma_deg: 1.0
+  block_log_scale_sigma: 0.05
+  block_trans_sigma: 0.02
+  key_rot_sigma_deg: 0.5
+  key_log_scale_sigma: 0.05
+  key_trans_sigma: 0.01
+  smoothness_weight: 1.0
+  block_factor: 1.0
+  cauchy_px: 2.0
+  iterations: 40
+  init_px: 40.0
+  cap_px: 50.0
+  dense_max: 4200
+  neighbour_keyframes: 2
+  min_correspondences: 15
